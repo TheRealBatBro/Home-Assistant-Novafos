@@ -1,0 +1,84 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Novafos",
+        "description": "Log in on the Novafos website, copy the `access_token` from the `token` request in the browser's developer tools (F12 → Network) and paste it here. Tokens are valid for one hour; the first hour is used to import your history.",
+        "data": {
+          "name": "Name",
+          "access_token": "Access token"
+        }
+      }
+    },
+    "error": {
+      "invalid_token": "That does not look like an access token.",
+      "token_expired": "The token has expired. Log in again and copy a new one.",
+      "invalid_auth": "Novafos rejected the token.",
+      "cannot_connect": "Could not reach the Novafos/KMD API.",
+      "no_meters": "No active water or heating meters were found on this login."
+    },
+    "abort": {
+      "already_configured": "This Novafos customer is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "New access token",
+        "description": "Paste a fresh access token. New data is fetched right away and for as long as the token is valid (one hour).",
+        "data": {
+          "access_token": "Access token"
+        }
+      }
+    },
+    "error": {
+      "invalid_token": "That does not look like an access token.",
+      "token_expired": "The token has expired. Log in again and copy a new one.",
+      "invalid_auth": "Novafos rejected the token.",
+      "cannot_connect": "Could not reach the Novafos/KMD API.",
+      "no_meters": "No active meters were found on this login.",
+      "wrong_customer": "The token belongs to a different Novafos customer."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "statistics": {
+        "name": "Statistics"
+      },
+      "last_day": {
+        "name": "Last full day"
+      },
+      "last_7_days": {
+        "name": "Last 7 days"
+      },
+      "month_to_date": {
+        "name": "This month"
+      },
+      "year_to_date": {
+        "name": "This year"
+      },
+      "data_until": {
+        "name": "Data until"
+      },
+      "token_expires": {
+        "name": "Token expires"
+      }
+    }
+  },
+  "services": {
+    "update_token": {
+      "name": "Update token",
+      "description": "Give the integration a fresh access token (used by the Novafos Chrome extension).",
+      "fields": {
+        "access_token": {
+          "name": "Access token",
+          "description": "The access_token from the Novafos login. 'Bearer ' prefix or the whole JSON response is also accepted."
+        },
+        "config_entry_id": {
+          "name": "Entry",
+          "description": "Only update this entry. Default: all Novafos entries."
+        }
+      }
+    }
+  }
+}

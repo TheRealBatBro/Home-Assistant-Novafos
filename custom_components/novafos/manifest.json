@@ -1,0 +1,13 @@
+{
+  "domain": "novafos",
+  "name": "Novafos",
+  "codeowners": ["@TheRealBatBro"],
+  "config_flow": true,
+  "dependencies": ["recorder"],
+  "documentation": "https://github.com/TheRealBatBro/Home-Assistant-Novafos",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/TheRealBatBro/Home-Assistant-Novafos/issues",
+  "requirements": [],
+  "version": "6.0.0"
+}

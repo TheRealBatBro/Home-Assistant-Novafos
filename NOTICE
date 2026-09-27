@@ -1,0 +1,4 @@
+This project is a rewrite of kpoppel/homeassistant-novafos
+(https://github.com/kpoppel/homeassistant-novafos), copyright kpoppel and contributors,
+licensed under the Apache License 2.0. The API client, coordinator, config flow,
+sensors and statistics import were rewritten in 2026 by TheRealBatBro.

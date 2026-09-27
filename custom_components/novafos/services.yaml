@@ -1,0 +1,13 @@
+update_token:
+  fields:
+    access_token:
+      required: true
+      example: "eyJhbGciOi..."
+      selector:
+        text:
+          multiline: true
+    config_entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: novafos

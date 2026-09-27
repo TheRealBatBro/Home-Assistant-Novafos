@@ -1,0 +1,84 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Novafos",
+        "description": "Log ind på Novafos' hjemmeside, kopiér `access_token` fra `token`-kaldet i browserens udviklerværktøjer (F12 → Netværk) og indsæt den her. Tokens gælder i én time; den første time bruges til at hente din historik.",
+        "data": {
+          "name": "Navn",
+          "access_token": "Adgangstoken"
+        }
+      }
+    },
+    "error": {
+      "invalid_token": "Det ligner ikke et adgangstoken.",
+      "token_expired": "Tokenet er udløbet. Log ind igen og kopiér et nyt.",
+      "invalid_auth": "Novafos afviste tokenet.",
+      "cannot_connect": "Kunne ikke få forbindelse til Novafos/KMD.",
+      "no_meters": "Der blev ikke fundet aktive vand- eller varmemålere på dette login."
+    },
+    "abort": {
+      "already_configured": "Denne Novafos-kunde er allerede sat op."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nyt adgangstoken",
+        "description": "Indsæt et nyt adgangstoken. Nye data hentes med det samme og så længe tokenet gælder (én time).",
+        "data": {
+          "access_token": "Adgangstoken"
+        }
+      }
+    },
+    "error": {
+      "invalid_token": "Det ligner ikke et adgangstoken.",
+      "token_expired": "Tokenet er udløbet. Log ind igen og kopiér et nyt.",
+      "invalid_auth": "Novafos afviste tokenet.",
+      "cannot_connect": "Kunne ikke få forbindelse til Novafos/KMD.",
+      "no_meters": "Der blev ikke fundet aktive målere på dette login.",
+      "wrong_customer": "Tokenet tilhører en anden Novafos-kunde."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "statistics": {
+        "name": "Statistik"
+      },
+      "last_day": {
+        "name": "Seneste hele døgn"
+      },
+      "last_7_days": {
+        "name": "Seneste 7 dage"
+      },
+      "month_to_date": {
+        "name": "Denne måned"
+      },
+      "year_to_date": {
+        "name": "I år"
+      },
+      "data_until": {
+        "name": "Data til og med"
+      },
+      "token_expires": {
+        "name": "Token udløber"
+      }
+    }
+  },
+  "services": {
+    "update_token": {
+      "name": "Opdatér token",
+      "description": "Giv integrationen et nyt adgangstoken (bruges af Novafos Chrome-udvidelsen).",
+      "fields": {
+        "access_token": {
+          "name": "Adgangstoken",
+          "description": "access_token fra Novafos-login. 'Bearer '-præfiks eller hele JSON-svaret accepteres også."
+        },
+        "config_entry_id": {
+          "name": "Integration",
+          "description": "Opdatér kun denne. Standard: alle Novafos-integrationer."
+        }
+      }
+    }
+  }
+}
