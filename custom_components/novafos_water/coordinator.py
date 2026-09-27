@@ -15,8 +15,9 @@ from homeassistant.components.recorder.models import (
     StatisticMetaData,
 )
 from homeassistant.components.recorder.statistics import (
-    async_import_statistics,
+    async_add_external_statistics,
     get_last_statistics,
+    statistics_during_period,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -33,6 +34,7 @@ from .const import (
     UNIT_CLASSES,
     UNITS,
     UPDATE_INTERVAL,
+    legacy_statistic_id,
     statistic_id,
 )
 
@@ -68,6 +70,8 @@ class NovafosCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         )
         self.meters = [meter_from_dict(m) for m in entry.data.get("meters", [])]
         self.last_imported: dict[str, datetime] = {}
+        # Running total (the statistic's sum) through the last imported hour, per meter type.
+        self.total: dict[str, float] = {}
         self.last_error: str | None = None
         self._sync_task: asyncio.Task | None = None
         self._warned_expired = False
@@ -130,6 +134,59 @@ class NovafosCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                 # Sensors are created from the stored meters, so reload to add them.
                 self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
 
+    async def async_load_statistics(self) -> None:
+        """Read where each meter's history stands; copy v7.0 history over if needed.
+
+        Needs no token, so the consumption sensor has a value right after a restart.
+        """
+        for meter in self.meters:
+            if (last := await self._last_stat(statistic_id(meter.type))) is None:
+                last = await self._copy_legacy(meter)
+            if last is not None:
+                self.last_imported[meter.type] = last[0] + timedelta(hours=1)
+                self.total[meter.type] = last[1]
+
+    async def _last_stat(self, stat_id: str) -> tuple[datetime, float] | None:
+        last = await get_instance(self.hass).async_add_executor_job(
+            get_last_statistics, self.hass, 1, stat_id, True, {"sum"}
+        )
+        if not last.get(stat_id):
+            return None
+        row = last[stat_id][0]
+        return datetime.fromtimestamp(row["start"], timezone.utc), float(row["sum"] or 0.0)
+
+    async def _copy_legacy(self, meter: Meter) -> tuple[datetime, float] | None:
+        legacy = legacy_statistic_id(meter.type)
+        rows = (
+            await get_instance(self.hass).async_add_executor_job(
+                statistics_during_period,
+                self.hass,
+                datetime(2000, 1, 1, tzinfo=timezone.utc),
+                None,
+                {legacy},
+                "hour",
+                None,
+                {"sum", "state"},
+            )
+        ).get(legacy)
+        if not rows:
+            return None
+        stats = [
+            StatisticData(
+                start=datetime.fromtimestamp(r["start"], timezone.utc),
+                state=r["state"],
+                sum=r["sum"],
+            )
+            for r in rows
+        ]
+        async_add_external_statistics(self.hass, self._metadata(meter), stats)
+        # Queued after the import in the recorder, so the copy is written first.
+        get_instance(self.hass).async_clear_statistics([legacy])
+        _LOGGER.info(
+            "Moved %s hours of %s history to %s", len(stats), meter.type, statistic_id(meter.type)
+        )
+        return stats[-1]["start"], float(stats[-1]["sum"] or 0.0)
+
     async def async_sync_statistics(self) -> None:
         """Import all complete hourly values that are not in the recorder yet."""
         for meter in self.meters:
@@ -146,17 +203,12 @@ class NovafosCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.async_update_listeners()
 
     async def _sync_meter(self, meter: Meter) -> None:
-        stat_id = statistic_id(meter.type)
-        last = await get_instance(self.hass).async_add_executor_job(
-            get_last_statistics, self.hass, 1, stat_id, True, {"sum"}
-        )
         today = datetime.now(TZ).date()
-        if last.get(stat_id):
-            row = last[stat_id][0]
-            after = datetime.fromtimestamp(row["start"], timezone.utc)
-            total = float(row["sum"] or 0.0)
+        if meter.type in self.last_imported:
+            # Tracked here, not re-read: the recorder may not have committed the last import yet.
+            after = self.last_imported[meter.type] - timedelta(hours=1)
+            total = self.total[meter.type]
             day = after.astimezone(TZ).date()
-            self.last_imported[meter.type] = after + timedelta(hours=1)
         else:
             after = None
             total = 0.0
@@ -189,20 +241,21 @@ class NovafosCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                     stats.append(
                         StatisticData(start=h["start"], state=h["value"], sum=round(total, 6))
                     )
-                async_import_statistics(self.hass, self._metadata(meter), stats)
+                async_add_external_statistics(self.hass, self._metadata(meter), stats)
                 after = hours[-1]["start"]
                 self.last_imported[meter.type] = after + timedelta(hours=1)
+                self.total[meter.type] = round(total, 6)
                 _LOGGER.debug("Imported %s %s hours up to %s", len(stats), meter.type, after)
                 self.async_update_listeners()
             day = chunk[-1] + timedelta(days=1)
 
-    @staticmethod
-    def _metadata(meter: Meter) -> StatisticMetaData:
+    def _metadata(self, meter: Meter) -> StatisticMetaData:
+        name = self.config_entry.data.get("name") or "Novafos Water"
         return StatisticMetaData(
             mean_type=StatisticMeanType.NONE,
             has_sum=True,
-            name=None,
-            source="recorder",
+            name=f"{name} consumption" if meter.type == "water" else f"{name} {meter.type}",
+            source=DOMAIN,
             statistic_id=statistic_id(meter.type),
             unit_class=UNIT_CLASSES[meter.type],
             unit_of_measurement=UNITS[meter.type],

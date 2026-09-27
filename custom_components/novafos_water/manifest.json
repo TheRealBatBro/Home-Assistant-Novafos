@@ -13,5 +13,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/TheRealBatBro/Home-Assistant-Novafos/issues",
   "requirements": [],
-  "version": "7.0.0"
+  "version": "7.1.0"
 }

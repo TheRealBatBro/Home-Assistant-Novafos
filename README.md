@@ -12,7 +12,7 @@ so it never collides with the original. Both can be installed at the same time.
 
 | Entity | Meaning |
 |---|---|
-| `sensor.novafos_water_consumption` | Hourly consumption history (long-term statistics). State is always `unknown` on purpose; use it in statistics cards, apexcharts and the Energy dashboard. |
+| `sensor.novafos_water_consumption` | Total consumption through the last imported hour. The hourly history behind it is the statistic **`novafos_water:water_consumption`** ("Novafos Water consumption"). |
 | `sensor.novafos_water_last_full_day` | Consumption on the latest complete day (attribute `date`) |
 | `sensor.novafos_water_last_7_days` | Last 7 complete days |
 | `sensor.novafos_water_this_month` / `sensor.novafos_water_this_year` | Month-to-date / year-to-date, matches the Novafos website |
@@ -23,7 +23,12 @@ The consumption sensors keep their last values across restarts and while no toke
 
 ### Energy dashboard
 
-Settings → Dashboards → Energy → *Water consumption* → add `sensor.novafos_water_consumption`.
+Settings → Dashboards → Energy → *Water consumption* → add **Novafos Water consumption**
+(`novafos_water:water_consumption`). For cost, use *Use a static price* with your price per m³
+(Frederikssund 2026: 93.55 kr/m³ for water plus wastewater, incl. VAT).
+
+Statistics graph cards use the same statistic. apexcharts cannot read external
+statistics (`domain:name` ids); use the built-in statistics graph card for history.
 
 ## The token (read this)
 
@@ -61,13 +66,20 @@ Manual: copy `custom_components/novafos_water` into your `config/custom_componen
 
 Requires Home Assistant 2025.10 or newer.
 
+## Upgrading from 7.0
+
+7.0 kept the history on `sensor.novafos_water_consumption`, whose state was always
+`unknown`, and the Energy dashboard flags that. 7.1 moves the history to the
+`novafos_water:water_consumption` statistic by itself at startup (no token needed).
+In the Energy dashboard, replace the water source with **Novafos Water consumption**.
+
 ## Switching from kpoppel/homeassistant-novafos
 
 Nothing is migrated: this integration imports your history itself with the first token.
 
 1. Add *Novafos Water* and paste a token.
 2. In the Energy dashboard, remove the old `sensor.novafos_water_statistics…` water source
-   and add `sensor.novafos_water_consumption`.
+   and add **Novafos Water consumption** (`novafos_water:water_consumption`).
 3. Remove the old *Novafos* integration (and uninstall it in HACS) whenever you like.
    Developer tools → Statistics then offers to remove the old statistics.
 

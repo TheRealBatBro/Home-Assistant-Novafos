@@ -12,7 +12,6 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
-    SensorStateClass,
 )
 from homeassistant.const import CONF_NAME, EntityCategory
 from homeassistant.core import HomeAssistant, callback
@@ -74,7 +73,7 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     entities: list[SensorEntity] = [TokenExpirySensor(coordinator)]
     for meter in coordinator.meters:
-        entities.append(StatisticsSensor(coordinator, meter))
+        entities.append(ConsumptionSensor(coordinator, meter))
         entities.extend(MeterSensor(coordinator, meter, d) for d in METER_SENSORS)
     async_add_entities(entities)
 
@@ -143,23 +142,20 @@ class MeterSensor(NovafosEntity, RestoreSensor):
         return self._attrs
 
 
-class StatisticsSensor(NovafosEntity, SensorEntity):
-    """Carrier for the imported hourly statistics.
+class ConsumptionSensor(NovafosEntity, SensorEntity):
+    """Total consumption through the last imported hour.
 
-    Its state stays unknown on purpose: the data is hours to days old, and a state
-    would be recorded as a current reading and corrupt the imported statistics.
-    Use it in statistics cards, apexcharts and the Energy dashboard.
+    No state class on purpose: the value is hours to days old, and the recorder
+    would treat it as a live reading. The hourly history is in the external
+    statistic (see the statistic_id attribute), which the Energy dashboard uses.
     """
 
     _attr_translation_key = "statistics"
-    _attr_state_class = SensorStateClass.TOTAL
     _attr_suggested_display_precision = 3
-    _attr_native_value = None
 
     def __init__(self, coordinator: NovafosCoordinator, meter: Meter) -> None:
         super().__init__(coordinator)
         self._meter = meter
-        self.entity_id = statistic_id(meter.type)
         self._attr_unique_id = f"{meter.installation_id}_statistics"
         self._attr_device_info = _meter_device(coordinator.config_entry, meter)
         self._attr_device_class = DEVICE_CLASSES[meter.type]
@@ -167,9 +163,16 @@ class StatisticsSensor(NovafosEntity, SensorEntity):
         self._attr_icon = ICONS[meter.type]
 
     @property
+    def native_value(self) -> float | None:
+        return self.coordinator.total.get(self._meter.type)
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any]:
         until = self.coordinator.last_imported.get(self._meter.type)
-        return {"imported_until": until.isoformat() if until else None}
+        return {
+            "imported_until": until.isoformat() if until else None,
+            "statistic_id": statistic_id(self._meter.type),
+        }
 
 
 class TokenExpirySensor(NovafosEntity, SensorEntity):

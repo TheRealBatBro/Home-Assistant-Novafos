@@ -22,5 +22,10 @@ UNIT_CLASSES = {"water": "volume", "heating": "energy"}
 
 
 def statistic_id(meter_type: str) -> str:
-    """Hourly statistics entity. Deliberately differs from the old kpoppel integration's ids."""
+    """External statistic holding the hourly history (what the Energy dashboard uses)."""
+    return f"{DOMAIN}:{meter_type}_consumption"
+
+
+def legacy_statistic_id(meter_type: str) -> str:
+    """Where v7.0 stored the history (on the sensor entity); copied over on upgrade."""
     return f"sensor.novafos_{meter_type}_consumption"

@@ -60,6 +60,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: NovafosConfigEntry) -> bool:
     coordinator = NovafosCoordinator(hass, entry)
+    await coordinator.async_load_statistics()
     # Never fails on an expired token: the sensors keep their restored values.
     await coordinator.async_refresh()
     entry.runtime_data = coordinator
