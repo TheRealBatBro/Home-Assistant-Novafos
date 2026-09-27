@@ -127,4 +127,8 @@ async def test_migrate_upstream_entry(hass, mock_api):
     assert entry.version == 5
     assert entry.data["meters"][0]["installation_id"] == METER.installation_id
     assert entry.options == {"access_token": token}
+    # Meters are learnt on first fetch, then the entry reloads to create the sensors.
+    await hass.async_block_till_done(wait_background_tasks=True)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    assert entry.state is config_entries.ConfigEntryState.LOADED
     assert hass.states.get("sensor.novafos_this_year") is not None
