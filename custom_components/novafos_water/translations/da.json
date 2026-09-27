@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Novafos",
+        "title": "Novafos Water",
         "description": "Log ind på Novafos' hjemmeside, kopiér `access_token` fra `token`-kaldet i browserens udviklerværktøjer (F12 → Netværk) og indsæt den her. Tokens gælder i én time; den første time bruges til at hente din historik.",
         "data": {
           "name": "Navn",
@@ -43,7 +43,7 @@
   "entity": {
     "sensor": {
       "statistics": {
-        "name": "Statistik"
+        "name": "Forbrug"
       },
       "last_day": {
         "name": "Seneste hele døgn"
@@ -76,7 +76,7 @@
         },
         "config_entry_id": {
           "name": "Integration",
-          "description": "Opdatér kun denne. Standard: alle Novafos-integrationer."
+          "description": "Opdatér kun denne. Standard: alle Novafos Water-integrationer."
         }
       }
     }

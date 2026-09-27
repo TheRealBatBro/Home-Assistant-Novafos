@@ -1,13 +1,17 @@
 {
-  "domain": "novafos",
-  "name": "Novafos",
-  "codeowners": ["@TheRealBatBro"],
+  "domain": "novafos_water",
+  "name": "Novafos Water",
+  "codeowners": [
+    "@TheRealBatBro"
+  ],
   "config_flow": true,
-  "dependencies": ["recorder"],
+  "dependencies": [
+    "recorder"
+  ],
   "documentation": "https://github.com/TheRealBatBro/Home-Assistant-Novafos",
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/TheRealBatBro/Home-Assistant-Novafos/issues",
   "requirements": [],
-  "version": "6.0.0"
+  "version": "7.0.0"
 }

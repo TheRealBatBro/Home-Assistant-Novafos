@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Novafos",
+        "title": "Novafos Water",
         "description": "Log in on the Novafos website, copy the `access_token` from the `token` request in the browser's developer tools (F12 → Network) and paste it here. Tokens are valid for one hour; the first hour is used to import your history.",
         "data": {
           "name": "Name",
@@ -43,7 +43,7 @@
   "entity": {
     "sensor": {
       "statistics": {
-        "name": "Statistics"
+        "name": "Consumption"
       },
       "last_day": {
         "name": "Last full day"
@@ -76,7 +76,7 @@
         },
         "config_entry_id": {
           "name": "Entry",
-          "description": "Only update this entry. Default: all Novafos entries."
+          "description": "Only update this entry. Default: all Novafos Water entries."
         }
       }
     }

@@ -13,7 +13,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .api import NovafosAuthError, clean_token, token_expiry
-from .const import CONF_ACCESS_TOKEN, DEFAULT_NAME, DOMAIN
+from .const import CONF_ACCESS_TOKEN, DOMAIN
 from .coordinator import NovafosConfigEntry, NovafosCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ SERVICE_UPDATE_TOKEN = "update_token"
 UPDATE_TOKEN_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ACCESS_TOKEN): cv.string,
-        # Sent by the upstream Chrome extension; no longer needed (the token carries its expiry).
+        # Sent by kpoppel's Chrome extension; ignored (the token carries its own expiry).
         vol.Optional("access_token_date_updated"): cv.string,
         vol.Optional("config_entry_id"): cv.string,
     }
@@ -77,18 +77,3 @@ async def _async_options_updated(hass: HomeAssistant, entry: NovafosConfigEntry)
 async def async_unload_entry(hass: HomeAssistant, entry: NovafosConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-
-async def async_migrate_entry(hass: HomeAssistant, entry: NovafosConfigEntry) -> bool:
-    """Migrate entries made by kpoppel/homeassistant-novafos (versions 1-4)."""
-    if entry.version > 5:
-        return False
-    if entry.version < 5:
-        hass.config_entries.async_update_entry(
-            entry,
-            data={"name": entry.data.get("name", DEFAULT_NAME), "meters": []},
-            options={CONF_ACCESS_TOKEN: entry.options.get(CONF_ACCESS_TOKEN, "")},
-            version=5,
-            minor_version=0,
-        )
-        _LOGGER.info("Migrated Novafos entry to version 5")
-    return True

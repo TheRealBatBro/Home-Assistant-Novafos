@@ -2,8 +2,8 @@
 
 from datetime import timedelta
 
-DOMAIN = "novafos"
-DEFAULT_NAME = "Novafos"
+DOMAIN = "novafos_water"
+DEFAULT_NAME = "Novafos Water"
 
 CONF_ACCESS_TOKEN = "access_token"
 
@@ -22,5 +22,5 @@ UNIT_CLASSES = {"water": "volume", "heating": "energy"}
 
 
 def statistic_id(meter_type: str) -> str:
-    """Same id as the upstream integration so existing dashboards keep working."""
-    return f"sensor.{DOMAIN}_{meter_type}_statistics"
+    """Hourly statistics entity. Deliberately differs from the old kpoppel integration's ids."""
+    return f"sensor.novafos_{meter_type}_consumption"

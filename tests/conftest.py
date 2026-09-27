@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from custom_components.novafos.api import TZ, Meter
+from custom_components.novafos_water.api import TZ, Meter
 
 pytest_plugins = ["pytest_homeassistant_custom_component"]
 
@@ -67,7 +67,7 @@ def mock_api():
     async def login(self):
         self.customer_id, self.customer_number, self.address = "11112222", "3334444", "Testvej 1"
 
-    base = "custom_components.novafos.api.NovafosClient"
+    base = "custom_components.novafos_water.api.NovafosClient"
     with (
         patch(f"{base}.async_login", login),
         patch(f"{base}.async_get_meters", AsyncMock(return_value=[METER])) as meters,

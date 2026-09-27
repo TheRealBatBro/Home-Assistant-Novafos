@@ -1,30 +1,29 @@
-# Novafos for Home Assistant
+# Novafos Water for Home Assistant
 
 Water (and district heating) consumption from **Novafos** via KMD Easy-Energy, as
 Home Assistant sensors and hourly long-term statistics you can put in the Energy
 dashboard.
 
 This is a rewrite of [kpoppel/homeassistant-novafos](https://github.com/kpoppel/homeassistant-novafos)
-(Apache 2.0). It keeps the `novafos` domain, the `sensor.novafos_water_statistics`
-statistic and the `novafos.update_token` action, so existing dashboards and the
-[token Chrome extension](https://github.com/kpoppel/homeassistant-novafos-chrome-addon) keep working.
+(Apache 2.0). It is a **separate integration** (domain `novafos_water`) with its own entity ids,
+so it never collides with the original. Both can be installed at the same time.
 
 ## What you get
 
 | Entity | Meaning |
 |---|---|
-| `sensor.novafos_water_statistics` | Hourly consumption history (long-term statistics). State is always `unknown` on purpose; use it in statistics cards, apexcharts and the Energy dashboard. |
-| `sensor.novafos_last_full_day` | Consumption on the latest complete day (attribute `date`) |
-| `sensor.novafos_last_7_days` | Last 7 complete days |
-| `sensor.novafos_this_month` / `sensor.novafos_this_year` | Month-to-date / year-to-date, matches the Novafos website |
-| `sensor.novafos_data_until` | How far the meter data reaches (typically 1–2 days behind) |
-| `sensor.novafos_token_expires` | When the current access token stops working (diagnostic) |
+| `sensor.novafos_water_consumption` | Hourly consumption history (long-term statistics). State is always `unknown` on purpose; use it in statistics cards, apexcharts and the Energy dashboard. |
+| `sensor.novafos_water_last_full_day` | Consumption on the latest complete day (attribute `date`) |
+| `sensor.novafos_water_last_7_days` | Last 7 complete days |
+| `sensor.novafos_water_this_month` / `sensor.novafos_water_this_year` | Month-to-date / year-to-date, matches the Novafos website |
+| `sensor.novafos_water_data_until` | How far the meter data reaches (typically 1–2 days behind) |
+| `sensor.novafos_water_token_expires` | When the current access token stops working (diagnostic) |
 
 The consumption sensors keep their last values across restarts and while no token is valid.
 
 ### Energy dashboard
 
-Settings → Dashboards → Energy → *Water consumption* → add `sensor.novafos_water_statistics`.
+Settings → Dashboards → Energy → *Water consumption* → add `sensor.novafos_water_consumption`.
 
 ## The token (read this)
 
@@ -41,31 +40,39 @@ its own; it works on tokens you hand it:
 Ways to hand over a token:
 
 1. **Chrome extension** (easiest): [homeassistant-novafos-chrome-addon](https://github.com/kpoppel/homeassistant-novafos-chrome-addon).
-   Log in on the Novafos site and it calls `novafos.update_token` for you.
+   Log in on the Novafos site and it sends the token to Home Assistant. It is written for the
+   original integration, so load it unpacked and change one line in `popup.js`:
+   `/api/services/novafos/update_token` → `/api/services/novafos_water/update_token`.
 2. **Manually**: log in on the Novafos site with F12 → Network open, find the `token`
    request, copy `access_token` from the response, then go to Settings → Devices &
-   services → Novafos → *Configure* and paste it. A `Bearer ` prefix or the whole JSON
+   services → Novafos Water → *Configure* and paste it. A `Bearer ` prefix or the whole JSON
    response is accepted too.
-3. **Action**: `novafos.update_token` with `access_token` (for scripts/automations).
+3. **Action**: `novafos_water.update_token` with `access_token` (for scripts/automations).
 
 Logging in once a week is enough to keep the history complete.
 
 ## Installation
 
 HACS → ⋮ → Custom repositories → `https://github.com/TheRealBatBro/Home-Assistant-Novafos`
-(type *Integration*) → install *Novafos* → restart → Settings → Devices & services →
-Add integration → *Novafos* → paste a current token.
+(type *Integration*) → install *Novafos Water* → restart → Settings → Devices & services →
+Add integration → *Novafos Water* → paste a current token.
 
-Manual: copy `custom_components/novafos` into your `config/custom_components/` and restart.
+Manual: copy `custom_components/novafos_water` into your `config/custom_components/` and restart.
 
 Requires Home Assistant 2025.10 or newer.
 
-## Upgrading from kpoppel/homeassistant-novafos
+## Switching from kpoppel/homeassistant-novafos
 
-Existing entries are migrated automatically, and existing statistics are continued, not
-duplicated. The optional *grouped* day/week/month/year sensors are gone: statistics
-cards and apexcharts group the hourly statistic by any period themselves (stat type
-*Change*).
+Nothing is migrated: this integration imports your history itself with the first token.
+
+1. Add *Novafos Water* and paste a token.
+2. In the Energy dashboard, remove the old `sensor.novafos_water_statistics…` water source
+   and add `sensor.novafos_water_consumption`.
+3. Remove the old *Novafos* integration (and uninstall it in HACS) whenever you like.
+   Developer tools → Statistics then offers to remove the old statistics.
+
+The old grouped day/week/month/year sensors have no equivalent. Statistics cards and
+apexcharts group the hourly statistic by any period themselves (stat type *Change*).
 
 ## What changed compared with the original
 
@@ -85,7 +92,7 @@ cards and apexcharts group the hourly statistic by any period themselves (stat t
 ```yaml
 logger:
   logs:
-    custom_components.novafos: debug
+    custom_components.novafos_water: debug
 ```
 
 ## Development

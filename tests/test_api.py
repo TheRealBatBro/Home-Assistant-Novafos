@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from custom_components.novafos.api import NovafosAuthError, NovafosClient, clean_token, token_expiry
+from custom_components.novafos_water.api import NovafosAuthError, NovafosClient, clean_token, token_expiry
 
 from .conftest import METER, make_token
 

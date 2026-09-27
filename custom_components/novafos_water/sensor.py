@@ -21,7 +21,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import Meter
-from .const import DOMAIN, UNITS, statistic_id
+from .const import DEFAULT_NAME, DOMAIN, UNITS, statistic_id
 from .coordinator import NovafosConfigEntry, NovafosCoordinator
 
 DEVICE_CLASSES = {"water": SensorDeviceClass.WATER, "heating": SensorDeviceClass.ENERGY}
@@ -80,7 +80,7 @@ async def async_setup_entry(
 
 
 def _meter_device(entry: NovafosConfigEntry, meter: Meter) -> DeviceInfo:
-    name = entry.data.get(CONF_NAME, "Novafos")
+    name = entry.data.get(CONF_NAME, DEFAULT_NAME)
     return DeviceInfo(
         identifiers={(DOMAIN, f"{meter.installation_id}")},
         name=f"{name} {meter.type}" if meter.type != "water" else name,

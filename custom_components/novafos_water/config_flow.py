@@ -46,7 +46,7 @@ async def _validate(hass: HomeAssistant, raw: str) -> tuple[NovafosClient, list,
 class NovafosConfigFlow(ConfigFlow, domain=DOMAIN):
     """Set up with a name and a current access token."""
 
-    VERSION = 5
+    VERSION = 1
     MINOR_VERSION = 0
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:

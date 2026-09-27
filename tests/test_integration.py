@@ -13,20 +13,20 @@ from pytest_homeassistant_custom_component.components.recorder.common import (
     async_wait_recording_done,
 )
 
-from custom_components.novafos.api import NovafosAuthError
-from custom_components.novafos.const import DOMAIN
+from custom_components.novafos_water.api import NovafosAuthError
+from custom_components.novafos_water.const import DOMAIN
 
 from .conftest import FIRST_DAY_OFFSET, LAG_HOURS, METER, make_token
 
-STAT_ID = "sensor.novafos_water_statistics"
+STAT_ID = "sensor.novafos_water_consumption"
 METERS = [{"type": "water", "installation_id": METER.installation_id,
            "measurement_point_id": METER.measurement_point_id, "meter_number": METER.meter_number,
            "location": METER.location, "unit": METER.unit}]
 
 
 def _entry(token, **kw):
-    return MockConfigEntry(domain=DOMAIN, version=5, unique_id="11112222",
-                           data={"name": "Novafos", "meters": METERS},
+    return MockConfigEntry(domain=DOMAIN, version=1, unique_id="11112222",
+                           data={"name": "Novafos Water", "meters": METERS},
                            options={"access_token": token}, **kw)
 
 
@@ -42,11 +42,12 @@ async def _hourly(hass):
 async def test_config_flow(hass, mock_api):
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     assert result["type"] is FlowResultType.FORM
-    with patch("custom_components.novafos.async_setup_entry", return_value=True):
+    with patch("custom_components.novafos_water.async_setup_entry", return_value=True):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {"name": "Novafos", "access_token": "Bearer " + make_token()})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["result"].unique_id == "11112222"
+    assert result["result"].domain == "novafos_water"
     assert result["data"]["meters"][0]["installation_id"] == METER.installation_id
     assert not result["options"]["access_token"].startswith("Bearer")
 
@@ -59,7 +60,7 @@ async def test_config_flow_errors(hass, mock_api):
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"name": "Novafos", "access_token": "garbage"})
     assert result["errors"] == {"base": "invalid_token"}
-    with patch("custom_components.novafos.api.NovafosClient.async_login",
+    with patch("custom_components.novafos_water.api.NovafosClient.async_login",
                AsyncMock(side_effect=NovafosAuthError("401"))):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], {"name": "Novafos", "access_token": make_token()})
@@ -72,10 +73,10 @@ async def test_sensors_and_statistics(hass, mock_api):
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
 
-    last_day = hass.states.get("sensor.novafos_last_full_day")
+    last_day = hass.states.get("sensor.novafos_water_last_full_day")
     assert float(last_day.state) == 0.24  # 24 complete hours of 0.01
     assert last_day.attributes["date"] < dt_util.now().date().isoformat()
-    assert hass.states.get("sensor.novafos_token_expires").state not in ("unknown", "unavailable")
+    assert hass.states.get("sensor.novafos_water_token_expires").state not in ("unknown", "unavailable")
     assert hass.states.get(STAT_ID).state == "unknown"
 
     rows = await _hourly(hass)
@@ -104,7 +105,7 @@ async def test_expired_token_keeps_entry_loaded(hass, mock_api):
     await hass.async_block_till_done()
     assert entry.state is config_entries.ConfigEntryState.LOADED
     mock_api["hours"].assert_not_called()
-    assert hass.states.get("sensor.novafos_this_year") is not None
+    assert hass.states.get("sensor.novafos_water_this_year") is not None
 
     # Pushing a fresh token through the action (as the Chrome extension does) starts fetching.
     await hass.services.async_call(
@@ -114,21 +115,3 @@ async def test_expired_token_keeps_entry_loaded(hass, mock_api):
     assert mock_api["hours"].called
     assert entry.options["access_token"] == entry.runtime_data.client.token
 
-
-async def test_migrate_upstream_entry(hass, mock_api):
-    token = make_token()
-    entry = MockConfigEntry(
-        domain=DOMAIN, version=4, unique_id="Novafos",
-        data={"name": "Novafos", "use_grouped_sensors": True},
-        options={"access_token": token, "access_token_date_updated": "2026-01-01T00:00:00"})
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    assert entry.version == 5
-    assert entry.data["meters"][0]["installation_id"] == METER.installation_id
-    assert entry.options == {"access_token": token}
-    # Meters are learnt on first fetch, then the entry reloads to create the sensors.
-    await hass.async_block_till_done(wait_background_tasks=True)
-    await hass.async_block_till_done(wait_background_tasks=True)
-    assert entry.state is config_entries.ConfigEntryState.LOADED
-    assert hass.states.get("sensor.novafos_this_year") is not None

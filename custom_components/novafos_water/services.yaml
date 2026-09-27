@@ -10,4 +10,4 @@ update_token:
       required: false
       selector:
         config_entry:
-          integration: novafos
+          integration: novafos_water
