@@ -70,7 +70,7 @@ async def test_sensors_and_statistics(hass, mock_api):
     entry = _entry(make_token())
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
 
     last_day = hass.states.get("sensor.novafos_last_full_day")
     assert float(last_day.state) == 0.24  # 24 complete hours of 0.01
@@ -90,7 +90,7 @@ async def test_sensors_and_statistics(hass, mock_api):
     # A later sync only fetches from the last imported day and does not double count.
     mock_api["hours"].reset_mock()
     await entry.runtime_data.async_sync_statistics()
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert mock_api["hours"].call_count <= 3
     again = await _hourly(hass)
     assert len(again) == len(rows)
@@ -110,7 +110,7 @@ async def test_expired_token_keeps_entry_loaded(hass, mock_api):
     await hass.services.async_call(
         DOMAIN, "update_token",
         {"access_token": make_token(), "access_token_date_updated": ""}, blocking=True)
-    await hass.async_block_till_done()
+    await hass.async_block_till_done(wait_background_tasks=True)
     assert mock_api["hours"].called
     assert entry.options["access_token"] == entry.runtime_data.client.token
 
