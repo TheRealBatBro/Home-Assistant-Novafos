@@ -61,6 +61,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: NovafosConfigEntry) -> bool:
     coordinator = NovafosCoordinator(hass, entry)
     await coordinator.async_load_statistics()
+    # Also covers history just copied from v7.0; waits for the recorder, so run it in the background.
+    entry.async_create_background_task(hass, coordinator.async_rebuild_costs(), f"{DOMAIN} costs")
     # Never fails on an expired token: the sensors keep their restored values.
     await coordinator.async_refresh()
     entry.runtime_data = coordinator
@@ -73,6 +75,7 @@ async def _async_options_updated(hass: HomeAssistant, entry: NovafosConfigEntry)
     coordinator = entry.runtime_data
     if coordinator.set_token(entry.options.get(CONF_ACCESS_TOKEN, "")):
         await coordinator.async_request_refresh()
+    await coordinator.async_rebuild_costs()
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: NovafosConfigEntry) -> bool:

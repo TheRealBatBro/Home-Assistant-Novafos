@@ -24,10 +24,11 @@
   "options": {
     "step": {
       "init": {
-        "title": "Nyt adgangstoken",
-        "description": "Indsæt et nyt adgangstoken. Nye data hentes med det samme og så længe tokenet gælder (én time).",
+        "title": "Indstillinger",
+        "description": "Indsæt et nyt adgangstoken for at hente nye data (gælder i én time), og/eller angiv din vandpris pr. m³ for {year} inkl. moms (vand + spildevand). Prisen bruges til statistikken \"Novafos Water cost\" til Energi-dashboardet. Lad token stå tomt for kun at ændre prisen.",
         "data": {
-          "access_token": "Adgangstoken"
+          "access_token": "Nyt adgangstoken",
+          "price": "Pris pr. m³ (i år)"
         }
       }
     },

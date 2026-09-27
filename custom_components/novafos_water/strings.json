@@ -24,10 +24,11 @@
   "options": {
     "step": {
       "init": {
-        "title": "New access token",
-        "description": "Paste a fresh access token. New data is fetched right away and for as long as the token is valid (one hour).",
+        "title": "Options",
+        "description": "Paste a new access token to fetch new data (valid for one hour), and/or set your water price per m³ for {year} incl. VAT (water + wastewater). The price feeds the \"Novafos Water cost\" statistic for the Energy dashboard. Leave the token empty to only change the price.",
         "data": {
-          "access_token": "Access token"
+          "access_token": "New access token",
+          "price": "Price per m³ (this year)"
         }
       }
     },

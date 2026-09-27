@@ -12,10 +12,17 @@ from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFl
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
+from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+)
+from homeassistant.util import dt as dt_util
 
 from .api import NovafosAuthError, NovafosClient, NovafosError, clean_token
-from .const import CONF_ACCESS_TOKEN, DEFAULT_NAME, DOMAIN
+from .const import CONF_ACCESS_TOKEN, CONF_PRICE, CONF_PRICES, DEFAULT_NAME, DOMAIN, price_for_year
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,18 +83,45 @@ class NovafosConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class NovafosOptionsFlow(OptionsFlow):
-    """Paste a new access token."""
+    """Paste a new access token and/or set this year's price per m³."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
+        options = dict(self.config_entry.options)
+        year = str(dt_util.now().year)
         if user_input is not None:
-            client, _, errors = await _validate(self.hass, user_input[CONF_ACCESS_TOKEN])
-            unique_id = self.config_entry.unique_id
-            if not errors and unique_id and unique_id.isdigit() and unique_id != client.customer_id:
-                errors = {"base": "wrong_customer"}
+            if raw := (user_input.get(CONF_ACCESS_TOKEN) or "").strip():
+                client, _, errors = await _validate(self.hass, raw)
+                unique_id = self.config_entry.unique_id
+                if not errors and unique_id and unique_id.isdigit() and unique_id != client.customer_id:
+                    errors = {"base": "wrong_customer"}
+                if not errors:
+                    options[CONF_ACCESS_TOKEN] = client.token
             if not errors:
-                return self.async_create_entry(
-                    data={**self.config_entry.options, CONF_ACCESS_TOKEN: client.token}
-                )
-        schema = vol.Schema({vol.Required(CONF_ACCESS_TOKEN): TOKEN_SELECTOR})
-        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+                prices = dict(options.get(CONF_PRICES) or {})
+                if (price := user_input.get(CONF_PRICE)) is not None:
+                    prices[year] = round(float(price), 4)
+                else:
+                    prices.pop(year, None)
+                options[CONF_PRICES] = prices
+                return self.async_create_entry(data=options)
+        current = price_for_year(options.get(CONF_PRICES) or {}, int(year))
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_ACCESS_TOKEN): TOKEN_SELECTOR,
+                vol.Optional(
+                    CONF_PRICE, description={"suggested_value": current}
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0, max=1000, step=0.01, mode=NumberSelectorMode.BOX,
+                        unit_of_measurement=f"{self.hass.config.currency}/m³",
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"year": year},
+        )

@@ -27,6 +27,7 @@ from custom_components.novafos_water.const import DOMAIN
 from .conftest import FIRST_DAY_OFFSET, LAG_HOURS, METER, make_token
 
 STAT_ID = "novafos_water:water_consumption"
+COST_ID = "novafos_water:water_cost"
 CONSUMPTION = "sensor.novafos_water_consumption"
 LEGACY_ID = "sensor.novafos_water_consumption"
 METERS = [{"type": "water", "installation_id": METER.installation_id,
@@ -160,14 +161,47 @@ async def test_energy_dashboard_accepts_statistic(hass, mock_api):
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done(wait_background_tasks=True)
-    await async_wait_recording_done(hass)
+    await _set_price(hass, entry, 93.55)
 
     assert await async_setup_component(hass, "energy", {})
     manager = await energy_data.async_get_manager(hass)
     await manager.async_update({"energy_sources": [{
-        "type": "water", "stat_energy_from": STAT_ID, "stat_cost": None,
-        "entity_energy_price": None, "number_energy_price": 93.55,
+        "type": "water", "stat_energy_from": STAT_ID, "stat_cost": COST_ID,
+        "entity_energy_price": None, "number_energy_price": None,
     }]})
     result = await validate.async_validate(hass)
     issues = result.as_dict()["energy_sources"]
     assert issues == [[]], issues
+
+
+async def _set_price(hass, entry, price):
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"price": price})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done(wait_background_tasks=True)
+    await async_wait_recording_done(hass)
+
+
+async def test_price_option_builds_cost_statistic(hass, mock_api):
+    entry = _entry(make_token())
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+    token = entry.options["access_token"]
+    usage = await _hourly(hass)
+
+    # Price only, token field left empty: the token is kept.
+    await _set_price(hass, entry, 93.55)
+    year = str(dt_util.now().year)
+    assert entry.options["prices"] == {year: 93.55}
+    assert entry.options["access_token"] == token
+    cost = await _hourly(hass, COST_ID)
+    assert len(cost) == len(usage)
+    assert abs(cost[-1]["sum"] - usage[-1]["sum"] * 93.55) < 0.01
+
+    # Changing the price recalculates the history, without a token.
+    entry.runtime_data.client.token = make_token(-60)
+    await _set_price(hass, entry, 100)
+    cost = await _hourly(hass, COST_ID)
+    assert abs(cost[-1]["sum"] - usage[-1]["sum"] * 100) < 0.01

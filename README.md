@@ -23,9 +23,17 @@ The consumption sensors keep their last values across restarts and while no toke
 
 ### Energy dashboard
 
-Settings → Dashboards → Energy → *Water consumption* → add **Novafos Water consumption**
-(`novafos_water:water_consumption`). For cost, use *Use a static price* with your price per m³
-(Frederikssund 2026: 93.55 kr/m³ for water plus wastewater, incl. VAT).
+1. Settings → Devices & services → Novafos Water → *Configure* → enter your **price per m³**
+   for this year, incl. VAT (water + wastewater; Frederikssund 2026: 93.55 kr/m³). Leave the
+   token field empty to only change the price.
+2. Settings → Dashboards → Energy → *Water consumption* → add **Novafos Water consumption**
+   (`novafos_water:water_consumption`) and choose *Use an entity tracking the total costs* →
+   **Novafos Water cost** (`novafos_water:water_cost`).
+
+The Energy dashboard does not offer a static price for statistics that don't belong to an
+entity, so the integration calculates the cost itself, hour by hour. Changing the price
+recalculates that year's history (no token needed). Prices are kept per calendar year: set
+the new price in January; earlier years keep theirs. Fixed yearly charges are not included.
 
 Statistics graph cards use the same statistic. apexcharts cannot read external
 statistics (`domain:name` ids); use the built-in statistics graph card for history.

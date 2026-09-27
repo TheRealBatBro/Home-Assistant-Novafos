@@ -28,13 +28,16 @@ from .api import TZ, Meter, NovafosAuthError, NovafosClient, NovafosError
 from .const import (
     BACKFILL_DAYS,
     CONF_ACCESS_TOKEN,
+    CONF_PRICES,
     DOMAIN,
     IMPORT_CHUNK_DAYS,
     MAX_PARALLEL_REQUESTS,
     UNIT_CLASSES,
     UNITS,
     UPDATE_INTERVAL,
+    cost_statistic_id,
     legacy_statistic_id,
+    price_for_year,
     statistic_id,
 )
 
@@ -74,6 +77,7 @@ class NovafosCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.total: dict[str, float] = {}
         self.last_error: str | None = None
         self._sync_task: asyncio.Task | None = None
+        self._cost_lock = asyncio.Lock()
         self._warned_expired = False
 
     def set_token(self, token: str) -> bool:
@@ -201,6 +205,59 @@ class NovafosCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             except NovafosError as err:
                 _LOGGER.warning("Statistics import for %s failed: %s", meter.type, err)
         self.async_update_listeners()
+        await self.async_rebuild_costs()
+
+    async def async_rebuild_costs(self) -> None:
+        """Recalculate the cost statistic from the consumption history and the configured prices.
+
+        Rebuilt in full (a few thousand rows) so a price change also applies to past hours of
+        that year. Needs no token.
+        """
+        prices = self.config_entry.options.get(CONF_PRICES) or {}
+        if not prices:
+            return
+        async with self._cost_lock:
+            recorder = get_instance(self.hass)
+            await recorder.async_block_till_done()
+            for meter in self.meters:
+                if meter.type != "water":
+                    continue
+                stat_id = statistic_id(meter.type)
+                rows = (
+                    await recorder.async_add_executor_job(
+                        statistics_during_period,
+                        self.hass,
+                        datetime(2000, 1, 1, tzinfo=timezone.utc),
+                        None,
+                        {stat_id},
+                        "hour",
+                        None,
+                        {"state"},
+                    )
+                ).get(stat_id)
+                if not rows:
+                    continue
+                total, stats = 0.0, []
+                for r in rows:
+                    start = datetime.fromtimestamp(r["start"], timezone.utc)
+                    cost = (r["state"] or 0.0) * price_for_year(prices, start.astimezone(TZ).year)
+                    total += cost
+                    stats.append(StatisticData(start=start, state=round(cost, 4), sum=round(total, 4)))
+                async_add_external_statistics(
+                    self.hass,
+                    StatisticMetaData(
+                        mean_type=StatisticMeanType.NONE,
+                        has_sum=True,
+                        name=f"{self.config_entry.data.get('name') or 'Novafos Water'} cost",
+                        source=DOMAIN,
+                        statistic_id=cost_statistic_id(meter.type),
+                        unit_class=None,
+                        unit_of_measurement=self.hass.config.currency,
+                    ),
+                    stats,
+                )
+                _LOGGER.debug("Cost statistic rebuilt: %s hours, %.2f %s", len(stats), total,
+                              self.hass.config.currency)
 
     async def _sync_meter(self, meter: Meter) -> None:
         today = datetime.now(TZ).date()
